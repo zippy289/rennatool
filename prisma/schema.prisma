@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String              @id @default(cuid())
+  name                String
+  email               String              @unique
+  emailVerified       DateTime?
+  passwordHash        String?
+  image               String?
+  phone               String?
+  zipCode             String?
+  city                String?
+  state               String?
+  lat                 Float?
+  lng                 Float?
+  stripeAccountId     String?             @unique
+  stripeAccountStatus StripeAccountStatus @default(PENDING)
+  stripeCustomerId    String?             @unique
+  identityVerified    Boolean             @default(false)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  tools               Tool[]
+  bookingsAsRenter    Booking[]           @relation("RenterBookings")
+  reviewsGiven        Review[]            @relation("ReviewsGiven")
+  reviewsReceived     Review[]            @relation("ReviewsReceived")
+  accounts            Account[]
+  sessions            Session[]
+}
+
+enum StripeAccountStatus { PENDING ONBOARDING ACTIVE RESTRICTED DISABLED }
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+model Tool {
+  id                String        @id @default(cuid())
+  ownerId           String
+  name              String
+  description       String        @db.Text
+  category          ToolCategory
+  subcategory       String?
+  brand             String?
+  model             String?
+  condition         ToolCondition @default(GOOD)
+  dailyRate         Float
+  depositAmount     Float
+  weeklyDiscount    Float?
+  monthlyDiscount   Float?
+  zipCode           String
+  city              String
+  state             String
+  lat               Float
+  lng               Float
+  addressLine       String?
+  images            ToolImage[]
+  available         Boolean       @default(true)
+  minRentalDays     Int           @default(1)
+  maxRentalDays     Int           @default(30)
+  deliveryAvailable Boolean       @default(false)
+  deliveryFee       Float?
+  requiresDeposit   Boolean       @default(true)
+  notes             String?       @db.Text
+  viewCount         Int           @default(0)
+  rentalCount       Int           @default(0)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  owner             User          @relation(fields: [ownerId], references: [id])
+  bookings          Booking[]
+  reviews           Review[]
+  @@index([zipCode])
+  @@index([lat, lng])
+  @@index([category])
+  @@index([available])
+}
+
+model ToolImage {
+  id        String   @id @default(cuid())
+  toolId    String
+  url       String
+  publicId  String
+  alt       String?
+  order     Int      @default(0)
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  tool      Tool     @relation(fields: [toolId], references: [id], onDelete: Cascade)
+  @@index([toolId])
+}
+
+enum ToolCategory { POWER_TOOLS HAND_TOOLS GARDEN_LANDSCAPING CONSTRUCTION AUTOMOTIVE PLUMBING ELECTRICAL CLEANING PAINTING MOVING OUTDOOR_RECREATION FARMING_AGRICULTURE OTHER }
+enum ToolCondition { LIKE_NEW EXCELLENT GOOD FAIR }
+
+model Booking {
+  id                    String        @id @default(cuid())
+  toolId                String
+  renterId              String
+  startDate             DateTime
+  endDate               DateTime
+  totalDays             Int
+  dailyRate             Float
+  subtotal              Float
+  platformFee           Float
+  ownerEarnings         Float
+  depositAmount         Float
+  totalCharged          Float
+  discountApplied       Float         @default(0)
+  status                BookingStatus @default(PENDING)
+  stripePaymentIntentId String?       @unique
+  stripeTransferId      String?
+  depositRefundId       String?
+  returnedAt            DateTime?
+  damageReported        Boolean       @default(false)
+  damageNotes           String?       @db.Text
+  depositRefunded       Boolean       @default(false)
+  renterNotes           String?       @db.Text
+  ownerNotes            String?       @db.Text
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  tool                  Tool          @relation(fields: [toolId], references: [id])
+  renter                User          @relation("RenterBookings", fields: [renterId], references: [id])
+  review                Review?
+  @@index([toolId])
+  @@index([renterId])
+  @@index([status])
+  @@index([startDate, endDate])
+}
+
+enum BookingStatus { PENDING APPROVED PAID ACTIVE RETURNED COMPLETED CANCELLED DISPUTED REJECTED }
+
+model Review {
+  id         String     @id @default(cuid())
+  bookingId  String     @unique
+  toolId     String
+  reviewerId String
+  revieweeId String
+  rating     Int
+  comment    String?    @db.Text
+  type       ReviewType
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  booking    Booking    @relation(fields: [bookingId], references: [id])
+  tool       Tool       @relation(fields: [toolId], references: [id])
+  reviewer   User       @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  reviewee   User       @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+  @@index([toolId])
+  @@index([revieweeId])
+}
+
+enum ReviewType { RENTER_TO_OWNER OWNER_TO_RENTER }
