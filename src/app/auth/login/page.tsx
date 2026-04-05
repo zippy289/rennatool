@@ -21,8 +21,18 @@ function LoginForm() {
     setError(''); setLoading(true);
     try {
       // Replace with: await signIn('credentials', { email, password, redirect: false })
-      await new Promise(r => setTimeout(r, 800));
-      router.push(next);
+      const { signIn } = await import('next-auth/react');
+      const res = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+});
+if (res?.error) {
+  setError(res.error);
+  return;
+}
+router.push(next);
+router.refresh();
     } catch {
       setError('Invalid email or password');
     } finally {
