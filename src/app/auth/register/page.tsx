@@ -55,8 +55,11 @@ export default function RegisterPage() {
           {error && <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-[13px] text-red-600">{error}</div>}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-[13px] font-medium mb-1.5" htmlFor="name">Full name</label>
-              <input id="name" type="text" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Smith" autoComplete="name"
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-[13px] font-medium" htmlFor="name">Full name</label>
+                <span className={`text-[11px] ${name.length > 45 ? 'text-red-500' : 'text-ink-subtle'}`}>{name.length}/50</span>
+              </div>
+              <input id="name" type="text" required maxLength={50} value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Smith" autoComplete="name"
                 className="w-full px-3.5 py-2.5 border border-sand rounded-lg text-[14px] outline-none focus:border-brand transition-colors placeholder:text-ink-subtle/50" />
             </div>
             <div>

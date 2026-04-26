@@ -12,11 +12,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 });
     }
 
+    if (name.length > 50) {
+      return NextResponse.json({ error: 'Name must be 50 characters or fewer' }, { status: 400 });
+    }
+
     if (password.length < 8) {
       return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
     }
 
     const normalizedEmail = email.toLowerCase();
+
+    const existingName = await prisma.user.findFirst({ where: { name } });
+    if (existingName) {
+      return NextResponse.json({ error: 'That username is already taken. Please choose another.' }, { status: 409 });
+    }
 
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
